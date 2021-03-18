@@ -11,7 +11,7 @@ def main():
 
     dataset = dman.Dataset(normalize=FLAGS.datnorm)
     neuralnet = nn.ADAE(height=dataset.height, width=dataset.width, channel=dataset.channel, \
-        ksize=FLAGS.ksize, zdim=FLAGS.zdim, learning_rate=FLAGS.lr, path='Checkpoint')
+        ksize=FLAGS.ksize, learning_rate=FLAGS.lr, path='Checkpoint')
 
     neuralnet.confirm_params(verbose=False)
     # neuralnet.confirm_bn()
@@ -26,7 +26,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--datnorm', type=bool, default=True, help='Data normalization')
     parser.add_argument('--ksize', type=int, default=3, help='Size of Kernel')
-    parser.add_argument('--zdim', type=int, default=128, help='Dimension of latent vector z')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate for training')
     parser.add_argument('--epoch', type=int, default=100, help='Training epoch')
     parser.add_argument('--batch', type=int, default=32, help='Mini batch size')
