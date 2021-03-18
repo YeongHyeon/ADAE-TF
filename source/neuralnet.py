@@ -164,20 +164,20 @@ class ADAE(object):
         # L𝐷 = ‖𝑋 − 𝐷(𝑋)‖1 − ‖𝐺(𝑋) − 𝐷(𝐺(𝑋))‖1
         # L1-distance between real and real-hat
         self.losses['loss_d_term1'] = \
-            self.loss_l1(self.x - self.variables['d_x'], [1, 2, 3])
+            self.loss_l2(self.x - self.variables['d_x'], [1, 2, 3])
         # L1-distance between fake and fake-hat
         self.losses['loss_d_term2'] = \
-            self.loss_l1(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
+            self.loss_l2(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
         self.losses['loss_d'] = \
             tf.compat.v1.reduce_mean(tf.math.abs(self.losses['loss_d_term1'] - self.losses['loss_d_term2']))
 
         # L𝐺 = ‖𝑋 − 𝐺(𝑋)‖1+‖𝐺(𝑋) − 𝐷(𝐺(𝑋))‖1
         # L1-distance between real and fake
         self.losses['loss_g_term1'] = \
-            self.loss_l1(self.x - self.variables['g_x'], [1, 2, 3])
+            self.loss_l2(self.x - self.variables['g_x'], [1, 2, 3])
         # L1-distance between fake and fake-hat
         self.losses['loss_g_term2'] = \
-            self.loss_l1(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
+            self.loss_l2(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
         self.losses['loss_g'] = \
             tf.compat.v1.reduce_mean(self.losses['loss_g_term1'] + self.losses['loss_g_term2'])
 
@@ -232,7 +232,7 @@ class ADAE(object):
                 conv1 = self.layer.conv2d(x=x, stride=1, padding='SAME', \
                     filter_size=[ksize, ksize, c_in, c_out], batch_norm=norm, training=self.training, \
                     activation=activation, name="%s_conv%d_1" %(name, idx_d), verbose=verbose)
-                if(idx_d == (depth - 1)): activation = None
+                # if(idx_d == (depth - 1)): activation = None
                 conv2 = self.layer.conv2d(x=conv1, stride=1, padding='SAME', \
                     filter_size=[ksize, ksize, c_out, c_out], batch_norm=norm, training=self.training, \
                     activation=activation, name="%s_conv%d_2" %(name, idx_d), verbose=verbose)
@@ -283,6 +283,7 @@ class ADAE(object):
 
             d = self.layer.conv2d(x=x, stride=1, padding='SAME', \
                 filter_size=[ksize, ksize, c_in, self.channel], batch_norm=False, training=self.training, \
-                activation='sigmoid', name="%s_conv%d_3" %(name, idx_d), verbose=verbose)
+                activation=None, name="%s_conv%d_3" %(name, idx_d), verbose=verbose)
 
+            d = tf.clip_by_value(d, 1e=12, 1-(1e-12))
             return d
