@@ -285,5 +285,5 @@ class ADAE(object):
                 filter_size=[ksize, ksize, c_in, self.channel], batch_norm=False, training=self.training, \
                 activation=None, name="%s_conv%d_3" %(name, idx_d), verbose=verbose)
 
-            d = tf.clip_by_value(d, 1e=12, 1-(1e-12))
+            d = tf.clip_by_value(d, 1e-12, 1-(1e-12))
             return d
