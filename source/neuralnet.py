@@ -17,8 +17,6 @@ class ADAE(object):
 
         self.x = tf.compat.v1.placeholder(tf.float32, [None, self.height, self.width, self.channel], \
             name="x")
-        self.y = tf.compat.v1.placeholder(tf.float32, [None, 1], \
-            name="x")
         self.batch_size = tf.compat.v1.placeholder(tf.int32, shape=[], \
             name="batch_size")
         self.training = tf.compat.v1.placeholder(tf.bool, shape=[], \
@@ -32,12 +30,12 @@ class ADAE(object):
 
         with tf.control_dependencies(self.variables['ops_d']):
             self.optimizer_d = tf.compat.v1.train.AdamOptimizer( \
-                self.learning_rate, name='Adam_d').minimize(\
+                self.learning_rate/5, name='Adam_d').minimize(\
                 self.losses['loss_d'], var_list=self.variables['params_d'])
 
         with tf.control_dependencies(self.variables['ops_g']):
             self.optimizer_g = tf.compat.v1.train.AdamOptimizer( \
-                self.learning_rate*5, name='Adam_g').minimize(\
+                self.learning_rate, name='Adam_g').minimize(\
                 self.losses['loss_g'], var_list=self.variables['params_g'])
 
         # L𝐷 = ‖𝑋 − 𝐷(𝑋)‖1 − ‖𝐺(𝑋) − 𝐷(𝐺(𝑋))‖1
@@ -58,10 +56,10 @@ class ADAE(object):
 
         self.__init_session(path=self.path_ckpt)
 
-    def step(self, x, y, iteration=0, training=False):
+    def step(self, x, iteration=0, training=False):
 
-        feed_tr = {self.x:x, self.y:y, self.batch_size:x.shape[0], self.training:True}
-        feed_te = {self.x:x, self.y:y, self.batch_size:x.shape[0], self.training:False}
+        feed_tr = {self.x:x, self.batch_size:x.shape[0], self.training:True}
+        feed_te = {self.x:x, self.batch_size:x.shape[0], self.training:False}
 
         summary_list = []
         if(training):
@@ -123,9 +121,8 @@ class ADAE(object):
         for var in t_vars:
             if('bn' in var.name):
                 tmp_x = np.zeros((1, self.height, self.width, self.channel))
-                tmp_y = np.zeros((1, 1))
                 values = self.sess.run(var, \
-                    feed_dict={self.x:tmp_x, self.y:tmp_y, self.batch_size:1, self.training:False})
+                    feed_dict={self.x:tmp_x, self.batch_size:1, self.training:False})
                 if(verbose): print(var.name, var.shape)
                 if(verbose): print(values)
 
@@ -164,25 +161,25 @@ class ADAE(object):
         # L𝐷 = ‖𝑋 − 𝐷(𝑋)‖1 − ‖𝐺(𝑋) − 𝐷(𝐺(𝑋))‖1
         # L1-distance between real and real-hat
         self.losses['loss_d_term1'] = \
-            self.loss_l2(self.x - self.variables['d_x'], [1, 2, 3])
+            self.loss_l1(self.x - self.variables['d_x'], [1, 2, 3])
         # L1-distance between fake and fake-hat
         self.losses['loss_d_term2'] = \
-            self.loss_l2(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
+            self.loss_l1(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
         self.losses['loss_d'] = \
             tf.compat.v1.reduce_mean(tf.math.abs(self.losses['loss_d_term1'] - self.losses['loss_d_term2']))
 
         # L𝐺 = ‖𝑋 − 𝐺(𝑋)‖1+‖𝐺(𝑋) − 𝐷(𝐺(𝑋))‖1
         # L1-distance between real and fake
         self.losses['loss_g_term1'] = \
-            self.loss_l2(self.x - self.variables['g_x'], [1, 2, 3])
+            self.loss_l1(self.x - self.variables['g_x'], [1, 2, 3])
         # L1-distance between fake and fake-hat
         self.losses['loss_g_term2'] = \
-            self.loss_l2(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
+            self.loss_l1(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
         self.losses['loss_g'] = \
             tf.compat.v1.reduce_mean(self.losses['loss_g_term1'] + self.losses['loss_g_term2'])
 
         self.losses['mse'] = \
-            tf.compat.v1.reduce_mean(self.loss_l2(self.variables['y_hat'] - self.x, [1, 2, 3]))
+            tf.compat.v1.reduce_mean(self.loss_l1(self.variables['y_hat'] - self.x, [1, 2, 3]))
 
         self.variables['params_g'], self.variables['params_d'] = [], []
         for var in tf.compat.v1.trainable_variables():
@@ -195,46 +192,45 @@ class ADAE(object):
             if('_g' in ops.name): self.variables['ops_g'].append(ops)
             else: self.variables['ops_d'].append(ops)
 
-    def __build_model(self, x, ksize=3, norm=True, verbose=True):
+    def __build_model(self, x, ksize=3, verbose=True):
 
-        print("\n-*-*- Generator -*-*-")
+        if(verbose): print("\n* Generator")
         self.variables['z_g'] = \
             self.__encoder(x=x, ksize=ksize, reuse=False, \
-            name='enc_g', norm=norm, verbose=verbose)
+            name='enc_g', verbose=verbose)
         self.variables['g_x'] = \
             self.__decoder(z=self.variables['z_g'], ksize=ksize, reuse=False, \
-            name='gen_g', norm=norm, verbose=verbose)
+            name='gen_g', verbose=verbose)
 
-        print("\n-*-*- Discriminator -*-*-")
+        if(verbose): print("\n* Discriminator")
         self.variables['z_d_g_x'] = \
             self.__encoder(x=self.variables['g_x'], ksize=ksize, reuse=False, \
-            name='enc_d', norm=norm, verbose=verbose)
+            name='enc_d', verbose=verbose)
         self.variables['d_g_x'] = \
             self.__decoder(z=self.variables['z_d_g_x'], ksize=ksize, reuse=False, \
-            name='gen_d', norm=norm, verbose=verbose)
+            name='gen_d', verbose=verbose)
 
         self.variables['z_d_x'] = \
             self.__encoder(x=x, ksize=ksize, reuse=True, \
-            name='enc_d', norm=norm, verbose=False)
+            name='enc_d', verbose=verbose)
         self.variables['d_x'] = \
             self.__decoder(z=self.variables['z_d_x'], ksize=ksize, reuse=True, \
-            name='gen_d', norm=norm, verbose=False)
+            name='gen_d', verbose=verbose)
 
         self.variables['y_hat'] = tf.add(self.variables['d_g_x'], 0, name="y_hat")
 
-    def __encoder(self, x, ksize=3, reuse=False, \
-        name='enc', activation='relu', norm=True, depth=3, verbose=True):
+    def __encoder(self, x, ksize=3, outdim=1, reuse=False, \
+        name='enc', activation='relu', depth=3, verbose=True):
 
         with tf.variable_scope(name, reuse=reuse):
 
             c_in, c_out = self.channel, 16
             for idx_d in range(depth):
                 conv1 = self.layer.conv2d(x=x, stride=1, padding='SAME', \
-                    filter_size=[ksize, ksize, c_in, c_out], batch_norm=norm, training=self.training, \
+                    filter_size=[ksize, ksize, c_in, c_out], batch_norm=True, training=self.training, \
                     activation=activation, name="%s_conv%d_1" %(name, idx_d), verbose=verbose)
-                # if(idx_d == (depth - 1)): activation = None
                 conv2 = self.layer.conv2d(x=conv1, stride=1, padding='SAME', \
-                    filter_size=[ksize, ksize, c_out, c_out], batch_norm=norm, training=self.training, \
+                    filter_size=[ksize, ksize, c_out, c_out], batch_norm=True, training=self.training, \
                     activation=activation, name="%s_conv%d_2" %(name, idx_d), verbose=verbose)
                 maxp = self.layer.maxpool(x=conv2, ksize=2, strides=2, padding='SAME', \
                     name="%s_pool%d" %(name, idx_d), verbose=verbose)
@@ -249,7 +245,7 @@ class ADAE(object):
             return e
 
     def __decoder(self, z, ksize=3, reuse=False, \
-        name='dec', activation='relu', norm=True, depth=3, verbose=True):
+        name='dec', activation='relu', depth=3, verbose=True):
 
         with tf.variable_scope(name, reuse=reuse):
 
@@ -260,18 +256,18 @@ class ADAE(object):
             for idx_d in range(depth):
                 if(idx_d == 0):
                     convt1 = self.layer.conv2d(x=x, stride=1, padding='SAME', \
-                        filter_size=[ksize, ksize, c_in, c_out], batch_norm=norm, training=self.training, \
+                        filter_size=[ksize, ksize, c_in, c_out], batch_norm=True, training=self.training, \
                         activation=activation, name="%s_conv%d_1" %(name, idx_d), verbose=verbose)
                 else:
                     convt1 = self.layer.convt2d(x=x, stride=2, padding='SAME', \
                         output_shape=[self.batch_size, h_out, w_out, c_out], filter_size=[ksize, ksize, c_out, c_in], \
-                        dilations=[1, 1, 1, 1], batch_norm=norm, training=self.training, \
+                        dilations=[1, 1, 1, 1], batch_norm=True, training=self.training, \
                         activation=activation, name="%s_conv%d_1" %(name, idx_d), verbose=verbose)
                     h_out *= 2
                     w_out *= 2
 
                 convt2 = self.layer.conv2d(x=convt1, stride=1, padding='SAME', \
-                    filter_size=[ksize, ksize, c_out, c_out], batch_norm=norm, training=self.training, \
+                    filter_size=[ksize, ksize, c_out, c_out], batch_norm=True, training=self.training, \
                     activation=activation, name="%s_conv%d_2" %(name, idx_d), verbose=verbose)
                 x = convt2
 
@@ -283,7 +279,6 @@ class ADAE(object):
 
             d = self.layer.conv2d(x=x, stride=1, padding='SAME', \
                 filter_size=[ksize, ksize, c_in, self.channel], batch_norm=False, training=self.training, \
-                activation=None, name="%s_conv%d_3" %(name, idx_d), verbose=verbose)
+                activation='sigmoid', name="%s_conv%d_3" %(name, idx_d), verbose=verbose)
 
-            d = tf.clip_by_value(d, 1e-12, 1-(1e-12))
             return d

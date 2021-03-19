@@ -78,7 +78,7 @@ def training(neuralnet, dataset, epochs, batch_size, normalize=True):
     for epoch in range(epochs):
 
         x_tr, y_tr, _ = dataset.next_train(batch_size=test_size, fix=True) # Initial batch
-        step_dict = neuralnet.step(x=x_tr, y=y_tr, training=False)
+        step_dict = neuralnet.step(x=x_tr, training=False)
         y_hat = step_dict['y_hat']
         save_img(contents=[x_tr, y_hat, (x_tr-y_hat)**2], \
             names=["Input\n(x)", "Restoration\n(x to x-hat)", "Difference"], \
@@ -86,7 +86,7 @@ def training(neuralnet, dataset, epochs, batch_size, normalize=True):
 
         while(True):
             x_tr, y_tr, terminator = dataset.next_train(batch_size)
-            step_dict = neuralnet.step(x=x_tr, y=y_tr, iteration=iteration, training=True)
+            step_dict = neuralnet.step(x=x_tr, iteration=iteration, training=True)
 
             iteration += 1
             if(terminator): break
@@ -108,7 +108,7 @@ def test(neuralnet, dataset, batch_size):
     while(True):
         x_te, y_te, terminator = dataset.next_test(1)
 
-        step_dict = neuralnet.step(x=x_te, y=y_te, training=False)
+        step_dict = neuralnet.step(x=x_te, training=False)
         y_hat, mse = step_dict['y_hat'], step_dict['mse']
         if(y_te[0] == 1):
             loss_list.append(mse)

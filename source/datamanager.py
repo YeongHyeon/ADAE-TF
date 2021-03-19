@@ -74,9 +74,6 @@ class Dataset(object):
         self.x_tr, self.y_tr = x_normal[:1000], (y_normal[:1000] * 0) + 1
         self.x_te, self.y_te = x_normal[1000:], y_normal[1000:]
 
-        self.x_tr = np.append(self.x_tr, x_abnormal[:1000], axis=0)
-        self.y_tr = np.append(self.y_tr, (y_abnormal[:1000] * 0), axis=0)
-
         self.x_te = np.append(self.x_te, x_abnormal[1000:], axis=0)
         self.y_te = np.append(self.y_te, y_abnormal[1000:], axis=0)
 
