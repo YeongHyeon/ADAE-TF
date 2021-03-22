@@ -34,10 +34,20 @@ TensorFlow implementation of Anomaly Detection with Adversarial Dual Autoencoder
 ### Training Procedure
 <div align="center">
   <p>
-    <img src="./figures/ADAE_loss_g.svg" width="300">
-    <img src="./figures/ADAE_loss_d.svg" width="300">
+    <img src="./figures/ADAE_G_loss_g.svg" width="300">
+    <img src="./figures/ADAE_G_loss_g_term1.svg" width="300">
+    <img src="./figures/ADAE_G_loss_g_term2.svg" width="300">
   </p>
-  <p>Loss graphs in the training procedure.</br>Each graph shows generative loss and discriminative loss respectively.</p>
+  <p>Loss graphs in the training procedure.</br>Each graph shows the generative loss, and the two terms that make loss-G.</p>
+</div>
+
+<div align="center">
+  <p>
+    <img src="./figures/ADAE_G_loss_g.svg" width="300">
+    <img src="./figures/ADAE_G_loss_g_term1.svg" width="300">
+    <img src="./figures/ADAE_G_loss_g_term2.svg" width="300">
+  </p>
+  <p>Loss graphs in the training procedure.</br>Each graph shows the discriminative loss, and the two terms that make loss-G.</p>
 </div>
 
 <div align="center">
