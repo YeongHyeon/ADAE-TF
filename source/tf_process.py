@@ -129,7 +129,7 @@ def test(neuralnet, dataset, batch_size):
     while(True):
         x_te, y_te, terminator = dataset.next_test(1)
 
-        step_dict = neuralnet.step(x=x_te, y=y_te, training=False)
+        step_dict = neuralnet.step(x=x_te, training=False)
         y_hat, mse = step_dict['y_hat'], step_dict['mse']
 
         loss4box[y_te[0, 0]].append(mse)

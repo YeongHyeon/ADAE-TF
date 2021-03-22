@@ -25,12 +25,12 @@ class ADAE(object):
         self.layer = lay.Layers()
 
         self.variables, self.losses = {}, {}
-        self.__build_model(x=self.x, ksize=self.ksize, verbose=verbose)
+        self.__build_model(ksize=self.ksize, verbose=verbose)
         self.__build_loss()
 
         with tf.control_dependencies(self.variables['ops_d']):
             self.optimizer_d = tf.compat.v1.train.AdamOptimizer( \
-                self.learning_rate/5, name='Adam_d').minimize(\
+                self.learning_rate, name='Adam_d').minimize(\
                 self.losses['loss_d'], var_list=self.variables['params_d'])
 
         with tf.control_dependencies(self.variables['ops_g']):
@@ -166,9 +166,9 @@ class ADAE(object):
         self.losses['loss_d_term2'] = \
             self.loss_l1(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
         self.losses['loss_d'] = \
-            tf.compat.v1.reduce_mean(tf.math.abs(self.losses['loss_d_term1'] - self.losses['loss_d_term2']))
+            tf.compat.v1.reduce_mean(tf.math.abs(self.losses['loss_d_term1'] - (0.5)*self.losses['loss_d_term2']))
 
-        # L𝐺 = ‖𝑋 − 𝐺(𝑋)‖1+‖𝐺(𝑋) − 𝐷(𝐺(𝑋))‖1
+        # L𝐺 = ‖𝑋 − 𝐺(𝑋)‖1 + ‖𝐺(𝑋) − 𝐷(𝐺(𝑋))‖1
         # L1-distance between real and fake
         self.losses['loss_g_term1'] = \
             self.loss_l1(self.x - self.variables['g_x'], [1, 2, 3])
@@ -176,7 +176,7 @@ class ADAE(object):
         self.losses['loss_g_term2'] = \
             self.loss_l1(self.variables['g_x'] - self.variables['d_g_x'], [1, 2, 3])
         self.losses['loss_g'] = \
-            tf.compat.v1.reduce_mean(self.losses['loss_g_term1'] + self.losses['loss_g_term2'])
+            tf.compat.v1.reduce_mean(self.losses['loss_g_term1'] + (0.5)*self.losses['loss_g_term2'])
 
         self.losses['mse'] = \
             tf.compat.v1.reduce_mean(self.loss_l1(self.variables['y_hat'] - self.x, [1, 2, 3]))
@@ -192,11 +192,11 @@ class ADAE(object):
             if('_g' in ops.name): self.variables['ops_g'].append(ops)
             else: self.variables['ops_d'].append(ops)
 
-    def __build_model(self, x, ksize=3, verbose=True):
+    def __build_model(self, ksize=3, verbose=True):
 
         if(verbose): print("\n* Generator")
         self.variables['z_g'] = \
-            self.__encoder(x=x, ksize=ksize, reuse=False, \
+            self.__encoder(x=self.x, ksize=ksize, reuse=False, \
             name='enc_g', verbose=verbose)
         self.variables['g_x'] = \
             self.__decoder(z=self.variables['z_g'], ksize=ksize, reuse=False, \
@@ -211,11 +211,11 @@ class ADAE(object):
             name='gen_d', verbose=verbose)
 
         self.variables['z_d_x'] = \
-            self.__encoder(x=x, ksize=ksize, reuse=True, \
-            name='enc_d', verbose=verbose)
+            self.__encoder(x=self.x, ksize=ksize, reuse=True, \
+            name='enc_d', verbose=False)
         self.variables['d_x'] = \
             self.__decoder(z=self.variables['z_d_x'], ksize=ksize, reuse=True, \
-            name='gen_d', verbose=verbose)
+            name='gen_d', verbose=False)
 
         self.variables['y_hat'] = tf.add(self.variables['d_g_x'], 0, name="y_hat")
 
