@@ -2,6 +2,8 @@
 =====
 
 TensorFlow implementation of Anomaly Detection with Adversarial Dual Autoencoders (ADAE) with MNIST dataset.  
+The Keras implementation is provided as the following link.  
+https://github.com/kjm1559/ADAE_LSTM_Autoencoder
 
 ## Architecture
 
